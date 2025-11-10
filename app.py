@@ -5,11 +5,14 @@ import pytesseract
 from io import BytesIO
 import os
 
-# --- LƯU Ý QUAN TRỌNG: ---
-# KHÔNG CẦN cấu hình đường dẫn cho Tesseract OCR ở đây.
-# Trên Streamlit Cloud, nó sẽ được cài đặt vào PATH.
-# Dòng sau đây bị loại bỏ: # pytesseract.pytesseract.tesseract_cmd = r'ĐƯỜNG_DẪN_TỚI_TESSERACT_EXE'
-# -------------------------
+# --- KHẮC PHỤC LỖI STREAMLIT CLOUD (RẤT QUAN TRỌNG) ---
+# Chỉ định rõ đường dẫn Tesseract. Trên môi trường Linux/Streamlit Cloud, 
+# Tesseract được cài đặt tại đây nhờ vào file packages.txt.
+try:
+    pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
+except Exception as e:
+    st.warning(f"Không thể cấu hình đường dẫn Tesseract: {e}. Có thể Tesseract không được cài đặt hoặc đã nằm trong PATH.")
+# -----------------------------------------------------
 
 def pdf_scan_to_docx(pdf_file_bytes):
     """
@@ -18,8 +21,7 @@ def pdf_scan_to_docx(pdf_file_bytes):
     doc = Document()
     
     try:
-        # 1. Chuyển PDF thành các ảnh (PDF to Image)
-        # Sẽ cần 'poppler-utils' được cài đặt trên Streamlit Cloud (qua packages.txt)
+        # Chuyển PDF thành các ảnh (Cần 'poppler-utils' từ packages.txt)
         images = convert_from_bytes(pdf_file_bytes)
     except Exception as e:
         st.error(f"Lỗi khi chuyển PDF sang ảnh. Đảm bảo file PDF hợp lệ và đã cài đặt 'poppler-utils': {e}")
@@ -29,27 +31,26 @@ def pdf_scan_to_docx(pdf_file_bytes):
     
     progress_bar = st.progress(0)
     
-    # 2. Lặp qua từng ảnh và áp dụng OCR
+    # Lặp qua từng ảnh và áp dụng OCR
     for i, image in enumerate(images):
-        # Sử dụng pytesseract để trích xuất text từ ảnh (OCR)
-        # Sử dụng 'vie+eng' để nhận dạng cả Tiếng Việt và Tiếng Anh (cần packages.txt)
         try:
+            # Sử dụng 'vie+eng' (Cần tesseract-ocr-vie và tesseract-ocr-eng từ packages.txt)
             text = pytesseract.image_to_string(image, lang='vie+eng')
             
-            # 3. Thêm text vào file DOCX
+            # Thêm text vào file DOCX
             if text and text.strip():
                 doc.add_paragraph(text)
-                doc.add_page_break() # Thêm ngắt trang giữa các trang PDF
+                doc.add_page_break()
                 
         except pytesseract.TesseractNotFoundError:
-            st.error("Lỗi: Không tìm thấy Tesseract OCR. Hãy đảm bảo bạn đã thêm 'tesseract-ocr' vào file **packages.txt**.")
+            st.error("Lỗi: Không tìm thấy Tesseract OCR. Hãy kiểm tra file **packages.txt**.")
             return None
         except Exception as e:
             st.error(f"Lỗi OCR không xác định ở trang {i+1}: {e}")
             
         progress_bar.progress((i + 1) / len(images))
         
-    # 4. Lưu DOCX vào bộ nhớ (BytesIO)
+    # Lưu DOCX vào bộ nhớ (BytesIO)
     docx_stream = BytesIO()
     doc.save(docx_stream)
     docx_stream.seek(0)
@@ -72,9 +73,7 @@ def main():
         
         # Chạy chuyển đổi
         with st.spinner('Đang tiến hành chuyển đổi (Bước 1: Tách ảnh, Bước 2: OCR Text)...'):
-            # Đọc nội dung file dưới dạng bytes
             pdf_bytes = uploaded_file.read()
-            
             docx_bytes = pdf_scan_to_docx(pdf_bytes)
 
         if docx_bytes:
@@ -90,7 +89,6 @@ def main():
                 file_name=output_filename,
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
-        # Không cần else vì lỗi đã được xử lý bên trong pdf_scan_to_docx
-        
+
 if __name__ == '__main__':
     main()
