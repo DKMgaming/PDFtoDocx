@@ -8,11 +8,12 @@ import os
 # --- KHẮC PHỤC LỖI STREAMLIT CLOUD (RẤT QUAN TRỌNG) ---
 # Chỉ định rõ đường dẫn Tesseract. Trên môi trường Linux/Streamlit Cloud, 
 # Tesseract được cài đặt tại đây nhờ vào file packages.txt.
+# --- BẢO ĐẢM DÒNG NÀY ĐÃ CÓ VÀ KHÔNG BỊ COMMENT ---
 try:
     pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 except Exception as e:
     st.warning(f"Không thể cấu hình đường dẫn Tesseract: {e}. Có thể Tesseract không được cài đặt hoặc đã nằm trong PATH.")
-# -----------------------------------------------------
+# ----------------------------------------------------
 
 def pdf_scan_to_docx(pdf_file_bytes):
     """
